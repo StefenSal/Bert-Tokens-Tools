@@ -11,7 +11,7 @@ setuptools.setup(
     description="A useful tool for bert tokenization",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/",
+    url="https://github.com/StefenSal/Bert-Tokens-Tools",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
