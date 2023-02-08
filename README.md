@@ -32,7 +32,7 @@ dict_path = "vocab/vocab.txt"
 tokenizer = Tokenizer(dict_path, do_lower_case=True)
 tokens = tokenizer.tokenize("播放MYLOVE")
 print(tokens)
-## ['播', '放', 'my', '##love']
+## ['[CLS]', '播', '放', 'my', '##love', '[SEP]']
 convert_word_span("播放MYLOVE", [2,8], tokenizer)
 print(convert_word_span)
 ## [2, 4]

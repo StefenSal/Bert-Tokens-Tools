@@ -42,13 +42,129 @@ def load_vocab(dict_path, encoding='utf-8', simplified=False, startswith=None):
         return token_dict
 
 
-class Tokenizer():
+class BasicTokenizer(object):
+    """分词器基类
+    """
+    def __init__(self, delete_cls_sep=False):
+        """初始化
+        """
+        self._token_pad = '[PAD]'
+        self._token_unk = '[UNK]'
+        self._token_mask = '[MASK]'
+        self._token_start = '[CLS]'
+        self._token_end = '[SEP]'
+        self.delete_cls_sep = delete_cls_sep
+
+    def tokenize(self, text, maxlen=None):
+        """分词函数
+        """
+        tokens = self._tokenize(text)
+
+        if self.delete_cls_sep:
+            return tokens
+        else:
+            if self._token_start is not None:
+                tokens.insert(0, self._token_start)
+            if self._token_end is not None:
+                tokens.append(self._token_end)
+
+            if maxlen is not None:
+                index = int(self._token_end is not None) + 1
+                self.truncate_sequence(maxlen, tokens, None, -index)
+            return tokens
+
+    def token_to_id(self, token):
+        """token转换为对应的id
+        """
+        raise NotImplementedError
+
+    def tokens_to_ids(self, tokens):
+        """token序列转换为对应的id序列
+        """
+        return [self.token_to_id(token) for token in tokens]
+
+    def truncate_sequence(
+            self, maxlen, first_sequence, second_sequence=None, pop_index=-1
+    ):
+        """截断总长度
+        """
+        if second_sequence is None:
+            second_sequence = []
+
+        while True:
+            total_length = len(first_sequence) + len(second_sequence)
+            if total_length <= maxlen:
+                break
+            elif len(first_sequence) > len(second_sequence):
+                first_sequence.pop(pop_index)
+            else:
+                second_sequence.pop(pop_index)
+
+    def encode(
+            self, first_text, second_text=None, maxlen=None, pattern='S*E*E'
+    ):
+        """输出文本对应token id和segment id
+        """
+        if is_string(first_text):
+            first_tokens = self.tokenize(first_text)
+        else:
+            first_tokens = first_text
+
+        if second_text is None:
+            second_tokens = None
+        elif is_string(second_text):
+            if pattern == 'S*E*E':
+                idx = int(bool(self._token_start))
+                second_tokens = self.tokenize(second_text)[idx:]
+            elif pattern == 'S*ES*E':
+                second_tokens = self.tokenize(second_text)
+        else:
+            second_tokens = second_text
+
+        if maxlen is not None:
+            self.truncate_sequence(maxlen, first_tokens, second_tokens, -2)
+
+        first_token_ids = self.tokens_to_ids(first_tokens)
+        first_segment_ids = [0] * len(first_token_ids)
+
+        if second_text is not None:
+            second_token_ids = self.tokens_to_ids(second_tokens)
+            second_segment_ids = [1] * len(second_token_ids)
+            first_token_ids.extend(second_token_ids)
+            first_segment_ids.extend(second_segment_ids)
+
+        input_mask = [1] * len(first_token_ids)
+        return first_token_ids, first_segment_ids, input_mask
+
+    def id_to_token(self, i):
+        """id序列为对应的token
+        """
+        raise NotImplementedError
+
+    def ids_to_tokens(self, ids):
+        """id序列转换为对应的token序列
+        """
+        return [self.id_to_token(i) for i in ids]
+
+    def decode(self, ids):
+        """转为可读文本
+        """
+        raise NotImplementedError
+
+    def _tokenize(self, text):
+        """基本分词函数
+        """
+        raise NotImplementedError
+
+
+class Tokenizer(BasicTokenizer):
     """Bert原生分词器
     纯Python实现，代码修改自keras_bert的tokenizer实现
     """
     def __init__(
-            self, token_dict, do_lower_case=False):
-
+            self, token_dict, do_lower_case=False, **kwargs
+    ):
+        super(Tokenizer, self).__init__(**kwargs)
         if is_string(token_dict):
             token_dict = load_vocab(token_dict)
 
@@ -63,14 +179,6 @@ class Tokenizer():
                 setattr(self, '_token_%s_id' % token, _token_id)
             except:
                 pass
-
-    def tokenize(self, text):
-        """分词
-        """
-        tokens = self._tokenize(text)
-
-        return tokens
-
 
     def _tokenize(self, text, pre_tokenize=True):
         """基本分词函数
