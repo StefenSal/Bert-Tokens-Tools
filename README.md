@@ -23,10 +23,12 @@ Convert token span from char-level to wordpiece-level. This usually happens in m
 
 For example, query="播放mylove"，the char-level index of sequence "mylove" is [2,8], while the token index after bert tokenization should be [2,4]
 
+And convert token span from wordpiece-level to char-level, just as the reverse procedure of above.
+
 ### Example
 ```python
 from bert_tokens.bert_tokenizer import Tokenizer
-from bert_tokens.convert_word_span import convert_word_span
+from bert_tokens.convert_word_span import convert_word_span, convert_char_span
 
 dict_path = "vocab/vocab.txt"
 tokenizer = Tokenizer(dict_path, do_lower_case=True)
@@ -34,6 +36,7 @@ tokens = tokenizer.tokenize("播放MYLOVE")
 print(tokens)
 ## ['[CLS]', '播', '放', 'my', '##love', '[SEP]']
 convert_word_span("播放MYLOVE", [2,8], tokenizer)
-print(convert_word_span)
 ## [2, 4]
+convert_char_span("播放MYLOVE", [2,4], tokenizer)
+## [2, 8]
 ```
